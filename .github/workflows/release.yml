@@ -1,0 +1,72 @@
+name: release
+# Tag a commit `vX.Y.Z` and push the tag: binaries for Linux (x86_64, aarch64) and macOS
+# (Apple Silicon, Intel) are built, stripped, checked for leftover paths and attached to a
+# GitHub release together with SHA-256 sums. Every archive gets a build provenance
+# attestation signed by GitHub (verify: `gh attestation verify <file> --owner <owner>`).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu }
+          - { os: macos-14, target: aarch64-apple-darwin }
+          - { os: macos-14, target: x86_64-apple-darwin }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          targets: ${{ matrix.target }}
+      # the pinned toolchain in rust-toolchain.toml must have the cross target too
+      - run: rustup target add ${{ matrix.target }}
+      - name: build
+        run: scripts/build-release.sh --target ${{ matrix.target }}
+      - name: package
+        run: |
+          set -eu
+          VERSION=${GITHUB_REF_NAME#v}
+          NAME=feedbench-${VERSION}-${{ matrix.target }}
+          mkdir -p dist/$NAME
+          cp target/${{ matrix.target }}/release/feedbench dist/$NAME/
+          cp README.md LICENSE dist/$NAME/
+          cp -r third_party dist/$NAME/
+          tar -C dist -czf dist/$NAME.tar.gz $NAME
+          (cd dist && shasum -a 256 $NAME.tar.gz > $NAME.tar.gz.sha256)
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -l dist && cat dist/*.sha256
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

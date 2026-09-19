@@ -1,0 +1,5 @@
+# Pinned so that release builds are reproducible: the same source, toolchain and
+# scripts/build-release.sh give byte-identical Linux binaries.
+[toolchain]
+channel = "1.88.0"
+profile = "minimal"
