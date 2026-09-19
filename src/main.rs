@@ -11,6 +11,7 @@ mod report;
 mod stats;
 mod ws;
 mod wsjson;
+mod wsraw;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
@@ -30,7 +31,7 @@ struct Args {
     #[arg(long = "source", value_name = "NAME=URL")]
     sources: Vec<String>,
 
-    /// Eira Pulse gRPC endpoint, e.g. pulse.eiranodes.dev:443
+    /// Eira Pulse gRPC endpoint: HOST:PORT (TLS), or http://HOST:PORT for a plaintext endpoint
     #[arg(long, value_name = "HOST:PORT")]
     eira: Option<String>,
 
@@ -41,6 +42,10 @@ struct Args {
     /// Generic JSON WebSocket feed, repeatable: NAME=wss://url,path=a.b[].hash[,header=K:V][,subscribe=TEXT]
     #[arg(long = "wsjson", value_name = "SPEC")]
     wsjson: Vec<String>,
+
+    /// Binary WebSocket feed of signed transactions, repeatable: NAME=wss://url[,header=K:V][,subscribe=TEXT]
+    #[arg(long = "wsraw", value_name = "SPEC")]
+    wsraw: Vec<String>,
 
     /// Run length in seconds (Ctrl-C prints what was collected so far)
     #[arg(long, default_value_t = 300)]
@@ -101,8 +106,14 @@ async fn main() -> Result<()> {
         infos.push(SourceInfo { name: src.name.clone(), kind: "wsjson".into(), target: src.url.clone(), level: String::new() });
         wsjson_sources.push(src);
     }
+    let mut wsraw_sources = Vec::new();
+    for s in &args.wsraw {
+        let src = wsraw::WsRawSource::parse(s)?;
+        infos.push(SourceInfo { name: src.name.clone(), kind: "wsraw".into(), target: src.url.clone(), level: String::new() });
+        wsraw_sources.push(src);
+    }
     if infos.is_empty() {
-        bail!("no sources: pass --source NAME=wss://..., --eira HOST:PORT and/or --wsjson SPEC");
+        bail!("no sources: pass --source NAME=wss://..., --eira HOST:PORT, --wsjson SPEC and/or --wsraw SPEC");
     }
     let mut names: Vec<&str> = infos.iter().map(|i| i.name.as_str()).collect();
     names.sort_unstable();
@@ -127,6 +138,10 @@ async fn main() -> Result<()> {
     }
     for src in wsjson_sources {
         tasks.push(tokio::spawn(wsjson::run(index, src, args.stamp, tx.clone())));
+        index += 1;
+    }
+    for src in wsraw_sources {
+        tasks.push(tokio::spawn(wsraw::run(index, src, args.stamp, tx.clone())));
         index += 1;
     }
     drop(tx);

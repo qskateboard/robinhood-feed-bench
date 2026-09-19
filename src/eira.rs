@@ -112,10 +112,13 @@ pub async fn run(index: usize, addr: String, level: Level, out: Sender<Event>) {
 
 /// One subscription; returns Ok only when the collector went away.
 async fn session(index: usize, addr: &str, level: Level, out: &Sender<Event>) -> Result<()> {
-    let endpoint = Channel::from_shared(format!("https://{addr}"))?
-        .tls_config(ClientTlsConfig::new().with_native_roots())?
-        .tcp_nodelay(true)
-        .connect_timeout(Duration::from_secs(10));
+    // `http://host:port` = plaintext (a Pulse on the same host); anything else is TLS on the given host:port
+    let plaintext = addr.starts_with("http://");
+    let url = if plaintext { addr.to_string() } else { format!("https://{}", addr.trim_start_matches("https://")) };
+    let mut endpoint = Channel::from_shared(url)?.tcp_nodelay(true).connect_timeout(Duration::from_secs(10));
+    if !plaintext {
+        endpoint = endpoint.tls_config(ClientTlsConfig::new().with_native_roots())?;
+    }
     let channel = endpoint.connect().await?;
     let mut grpc = Grpc::new(channel).max_decoding_message_size(64 << 20);
     grpc.ready().await?;

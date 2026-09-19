@@ -12,6 +12,9 @@ Sources:
 - `--eira HOST:PORT` — the Eira Pulse gRPC stream (`proto/pulse.proto`).
 - `--wsjson SPEC` — any JSON WebSocket feed that carries a tx hash or a raw signed tx at a known
   JSON path. Repeatable.
+- `--wsraw SPEC` — any binary WebSocket feed whose frames carry signed transactions back to back
+  (typed envelope or legacy RLP, optionally length-prefixed); text frames fall back to scanning
+  JSON for hashes or raw transactions. `NAME=wss://url[,header=K:V]`. Repeatable.
 
 The block-level table reproduces the methodology of BlockRazor's
 [robinhood-feed-speed](https://github.com/HYPERLIQUIDATED/robinhood-feed-speed) so its numbers are
@@ -93,6 +96,7 @@ Other options:
 |---|---|---|
 | `--seconds N` | 300 | run length; Ctrl-C stops early and prints what was collected |
 | `--eira-level received\|processed\|confirmed` | received | Eira commitment level |
+| `--eira http://HOST:PORT` | | plaintext gRPC instead of TLS, for a Pulse on the same host |
 | `--min-sources N` | all | a block/tx counts as matched once N sources delivered it |
 | `--warmup S` | 5 | seconds skipped after every source is connected (backlog replay) |
 | `--summary-interval S` | 300 | rolling block-level summary period |
