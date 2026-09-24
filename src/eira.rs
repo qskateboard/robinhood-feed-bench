@@ -131,6 +131,7 @@ async fn session(index: usize, addr: &str, level: Level, out: &Sender<Event>) ->
         action: Some(Action::Replace(pb::Subscription {
             transactions: [("all".to_string(), pb::TransactionFilter::default())].into(),
             commitment: level.commitment() as i32,
+            ..Default::default()
         })),
     };
     req_tx.send(replace).await.map_err(|_| anyhow!("request channel closed"))?;
