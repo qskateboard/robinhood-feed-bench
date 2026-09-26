@@ -13,7 +13,9 @@ Sources:
 
 - `--source NAME=wss://...` — any Nitro-format broadcast feed (the official
   `wss://feed.mainnet.chain.robinhood.com`, third-party feeders in the same format). Repeatable.
-- `--eira HOST:PORT` — the Eira Pulse gRPC stream (`proto/pulse.proto`).
+- `--eira http://pulse.eiranodes.dev:8443` — the Eira Pulse gRPC stream (`proto/pulse.proto`), plaintext on port 8443.
+  Use this endpoint: the legacy TLS port 443 adds a proxy hop and measures slower. `--eira HOST:PORT` (TLS) is
+  still accepted for other deployments.
 - `--wsjson SPEC` — any JSON WebSocket feed that carries a tx hash or a raw signed tx at a known
   JSON path. Repeatable.
 - `--wsraw SPEC` — any binary WebSocket feed whose frames carry signed transactions back to back
@@ -69,7 +71,7 @@ Official feed against Eira, five minutes:
 
 ```
 feedbench --source official=wss://feed.mainnet.chain.robinhood.com \
-          --eira pulse.eiranodes.dev:443
+          --eira http://pulse.eiranodes.dev:8443
 ```
 
 Official feed, Eira and a BlockRazor feeder (put your token in the URL):
@@ -77,7 +79,7 @@ Official feed, Eira and a BlockRazor feeder (put your token in the URL):
 ```
 feedbench --source official=wss://feed.mainnet.chain.robinhood.com \
           --source blockrazor=wss://us.robinhood-feeder.blockrazor.io/ws/{token} \
-          --eira pulse.eiranodes.dev:443 --seconds 600 --json run.json
+          --eira http://pulse.eiranodes.dev:8443 --seconds 600 --json run.json
 ```
 
 A generic JSON WebSocket feed. The shape below is an **illustration of the option syntax only**;
@@ -86,7 +88,7 @@ it is not the format of any particular vendor. Look up the vendor's message layo
 with keccak256):
 
 ```
-feedbench --eira pulse.eiranodes.dev:443 \
+feedbench --eira http://pulse.eiranodes.dev:8443 \
           --wsjson 'other=wss://example.invalid/stream,path=params.result.hash,header=Authorization:Bearer TOKEN,subscribe={"method":"subscribe","params":["newRawTransactions"]}'
 ```
 
@@ -100,7 +102,7 @@ Other options:
 |---|---|---|
 | `--seconds N` | 300 | run length; Ctrl-C stops early and prints what was collected |
 | `--eira-level received\|processed\|confirmed` | received | Eira commitment level |
-| `--eira http://HOST:PORT` | | plaintext gRPC instead of TLS, for a Pulse on the same host |
+| `--eira http://HOST:PORT` | | plaintext gRPC instead of TLS; the public Pulse endpoint is `http://pulse.eiranodes.dev:8443` |
 | `--min-sources N` | all | a block/tx counts as matched once N sources delivered it |
 | `--warmup S` | 5 | seconds skipped after every source is connected (backlog replay) |
 | `--summary-interval S` | 300 | rolling block-level summary period |
