@@ -5,7 +5,8 @@ transaction feeds. It connects to several sources at once from one machine, stam
 on arrival, matches the same block and the same transaction across sources, and prints who was
 first and by how much.
 
-Maintained by [Eira Nodes](https://eiranodes.dev) (Robinhood Chain gRPC transaction feed); published
+Maintained by [Eira Nodes](https://eiranodes.dev) ([Robinhood Chain gRPC stream](https://eiranodes.dev/robinhood-chain-grpc),
+[low-latency transaction feed](https://eiranodes.dev/robinhood-chain-transaction-feed)); published
 measurements are at [eiranodes.dev/docs/benchmarks](https://eiranodes.dev/docs/benchmarks). The tool itself is
 neutral: point it at any feeds you have access to.
 
